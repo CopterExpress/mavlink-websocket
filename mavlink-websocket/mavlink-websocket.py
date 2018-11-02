@@ -86,9 +86,10 @@ class MAVLinkClient(websocket.WebSocketHandler):
         self.message_stamps[stamp_key] = stamp
 
         msg_dict = msg.to_dict()
-        msg_dict['msgid'] = msg_dict.pop('mavpackettype')
+        msg_dict['msgid'] = msg.get_msgId()
         msg_dict['sysid'] = msg.get_srcSystem()
         msg_dict['compid'] = msg.get_srcComponent()
+        del msg_dict['mavpackettype']
 
         # replace NaNs to nulls
         for key in msg_dict:
