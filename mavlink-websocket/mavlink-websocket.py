@@ -26,7 +26,7 @@ class MAVLinkClient(websocket.WebSocketHandler):
             mavlink.MAVLINK_MSG_ID_SYS_STATUS: 0,
             mavlink.MAVLINK_MSG_ID_ALTITUDE: 1.0 / 3,
             mavlink.MAVLINK_MSG_ID_ATTITUDE: 1.0 / 3,
-            mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT: 1.0 / 5,
+            mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT: 1.0 / 10,
         }
 
         # Allowed outcoming meessages
