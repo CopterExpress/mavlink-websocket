@@ -1,5 +1,10 @@
 const MAVLINK_MSG_GLOBAL_POSITION_INT = 33;
+const MAVLINK_MSG_ID_COMMAND_LONG = 76;
 const MAVLINK_MSG_ALTITUDE = 141;
+const MAV_CMD_DO_SET_MODE = 176;
+const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
+const PX4_CUSTOM_MAIN_MODE_AUTO = 4;
+const PX4_CUSTOM_SUB_MODE_AUTO_LAND = 6;
 
 var sock = new WebSocket('ws://127.0.0.1:17437/mavlink');
 var map;
@@ -36,6 +41,23 @@ sock.onmessage = function(e) {
 				'Vehicle ' + sysid + ' (alt: ' + Math.round(msg.altitude_relative) + ')');
 		}
 	}
+}
+
+function sendLandCommand() {
+	sock.send(JSON.stringify({
+		msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+		target_system: 1,
+		target_component: 0,
+		command: MAV_CMD_DO_SET_MODE,
+		confirmation: 0,
+		param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+		param2: PX4_CUSTOM_MAIN_MODE_AUTO,
+		param3: PX4_CUSTOM_SUB_MODE_AUTO_LAND,
+		param4: 0,
+		param5: 0,
+		param6: 0,
+		param7: 0
+	}));
 }
 
 $(function() {
