@@ -1,4 +1,25 @@
+body {
+    font-family: sans-serif;
+}
+
 .map {
     width: 800px;
     height: 600px;
+}
+
+.vehicles {
+    margin-top: 20px;
+    display: block;
+}
+
+div.vehicle {
+    display: inline-block;
+    background: rgb(235, 235, 235);
+    padding: 10px;
+    position: relative;
+    margin-right: 10px;
+}
+
+.vehicle.armed .mode {
+    font-weight: bold;
 }
