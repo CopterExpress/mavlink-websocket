@@ -9,7 +9,6 @@ const PX4_CUSTOM_SUB_MODE_AUTO_LAND = 6;
 var sock = new WebSocket('ws://127.0.0.1:17437/mavlink');
 var map;
 var placemarks = {};
-var telemetry = {};
 
 sock.onmessage = function(e) {
 	// console.log(e.data);
