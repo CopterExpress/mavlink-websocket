@@ -50,8 +50,7 @@ class MAVLinkClient(websocket.WebSocketHandler):
         try:
             msg = json.loads(msg)
             msgid = msg.pop('msgid')
-            msgidn = getattr(mavlink, 'MAVLINK_MSG_ID_' + msgid)
-            if not msgidn in self.outcome_messages:
+            if not msgid in self.outcome_messages:
                 logging.warn('%s: outcoming message %s is not allowed', self.client_description, msgid)
                 return
 
@@ -60,8 +59,8 @@ class MAVLinkClient(websocket.WebSocketHandler):
                 if msg[key] is None:
                     msg[key] = float('nan')
 
-            fn = getattr(mavconn.mav, msgid.lower() + '_send')
-            fn(**msg)
+            # send message
+            mavconn.mav.send(mavlink.mavlink_map[msgid](**msg))
         except:
             logging.exception('%s: error passing outcoming message', self.client_description)
 
