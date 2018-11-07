@@ -34,6 +34,7 @@ class MAVLinkClient(websocket.WebSocketHandler):
 
         # Allowed outcoming meessages
         self.outcome_messages = {
+            mavlink.MAVLINK_MSG_ID_HEARTBEAT,
             mavlink.MAVLINK_MSG_ID_COMMAND_LONG,
         }
 
