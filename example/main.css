@@ -1,10 +1,11 @@
 body {
     font-family: sans-serif;
+    font-size: 16px;
 }
 
 .map {
     width: 800px;
-    height: 600px;
+    height: 500px;
 }
 
 .vehicles {
@@ -18,8 +19,27 @@ div.vehicle {
     padding: 10px;
     position: relative;
     margin-right: 10px;
+    line-height: 1.5em;
+}
+
+.vehicle .mode {
+    font-size: 120%;
+}
+
+.vehicle .id {
+    font-size: 80%;
 }
 
 .vehicle.armed .mode {
     font-weight: bold;
+}
+
+.vehicle button {
+    display: none;
+}
+
+.vehicle.copter [data-command=land], .vehicle.copter [data-command=run-mission],
+.vehicle.charging-station [data-command=open],
+.vehicle.charging-station [data-command=close] {
+    display: inline-block;
 }

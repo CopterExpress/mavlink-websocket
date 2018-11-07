@@ -3,9 +3,13 @@ const MAVLINK_MSG_GLOBAL_POSITION_INT = 33;
 const MAVLINK_MSG_ID_COMMAND_LONG = 76;
 const MAVLINK_MSG_ALTITUDE = 141;
 const MAV_CMD_DO_SET_MODE = 176;
+const MAV_CMD_COMPONENT_ARM_DISARM = 400;
 const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
+const MAV_MODE_FLAG_AUTO_ENABLED = 4;
 const MAV_MODE_FLAG_MANUAL_INPUT_ENABLED = 64;
 const MAV_MODE_FLAG_SAFETY_ARMED = 128;
+const MAV_TYPE_GCS = 6;
+const MAV_TYPE_CHARGING_STATION = 31;
 const PX4_CUSTOM_MAIN_MODE_AUTO = 4;
 const PX4_CUSTOM_SUB_MODE_AUTO_LAND = 6;
 
@@ -43,23 +47,34 @@ function parsePX4Mode(baseMode, customMode) {
 	}
 }
 
+function parseChargingStationMode(customMode) {
+	return ['UNKNOWN', 'OPEN', 'OPENING', 'CLOSED', 'CLOSING'][customMode];
+}
+
 sock.onmessage = function(e) {
 	// console.log(e.data);
 
 	var msg = JSON.parse(e.data);
 	var sysid = msg.sysid;
+	var vehicle = vehicles.find('.vehicle[data-id=' + sysid + ']');
 
 	if (msg.msgid == MAVLINK_MSG_HEARTBEAT) {
 		// https://mavlink.io/en/messages/common.html#HEARTBEAT
-		var vehicle = vehicles.find('.vehicle[data-id=' + sysid + ']');
 		if (!vehicle.length) {
 			// new vehicle
 			vehicle = $($('template.vehicle').html())
 			vehicle.attr('data-id', sysid);
 			vehicle.find('.id').html(sysid);
+			if (msg.type == MAV_TYPE_CHARGING_STATION) {
+				vehicle.addClass('charging-station');
+			} else {
+				vehicle.addClass('copter');
+			}
 			vehicle.appendTo(vehicles);
 		}
-		vehicle.find('.mode').html(parsePX4Mode(msg.base_mode, msg.custom_mode) || 'UNKNOWN');
+		var mode = msg.type == MAV_TYPE_CHARGING_STATION ?
+			parseChargingStationMode(msg.custom_mode) : parsePX4Mode(msg.base_mode, msg.custom_mode);
+		vehicle.find('.mode').html(mode || 'UNKNOWN');
 		vehicle.toggleClass('armed', Boolean(msg.base_mode & MAV_MODE_FLAG_SAFETY_ARMED));
 
 	} else if (msg.msgid == MAVLINK_MSG_GLOBAL_POSITION_INT && map) {
@@ -79,6 +94,8 @@ sock.onmessage = function(e) {
 		} else {
 			placemarks[sysid].geometry.setCoordinates(pos);
 		}
+		vehicle.find('.heading').html((msg.hdg / 100) + '&deg;');
+		vehicle.find('.altitude').html((msg.relative_alt / 1000).toFixed(1) + ' m');
 
 	} else if (msg.msgid == MAVLINK_MSG_ALTITUDE) {
 		// https://mavlink.io/en/messages/common.html#ALTITUDE
@@ -89,25 +106,103 @@ sock.onmessage = function(e) {
 	}
 }
 
-$('body').on('click', '.land', function(e) {
+function sendMsg(msg) {
+	sock.send(JSON.stringify(msg));
+}
+
+$('body').on('click', '.command', function(e) {
 	var sysid = Number($(e.target).closest('.vehicle').attr('data-id'));
-	// Change mode to land.
-	// See https://mavlink.io/en/messages/common.html#COMMAND_LONG and
-	// https://mavlink.io/en/messages/common.html#MAV_CMD_DO_SET_MODE
-	sock.send(JSON.stringify({
-		msgid: MAVLINK_MSG_ID_COMMAND_LONG,
-		target_system: sysid,
-		target_component: 0,
-		command: MAV_CMD_DO_SET_MODE,
-		confirmation: 0,
-		param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
-		param2: PX4_CUSTOM_MAIN_MODE_AUTO,
-		param3: PX4_CUSTOM_SUB_MODE_AUTO_LAND,
-		param4: 0,
-		param5: 0,
-		param6: 0,
-		param7: 0
-	}));
+	var command = $(e.target).attr('data-command');
+
+	// Send command
+	// See https://mavlink.io/en/messages/common.html#COMMAND_LONG,
+	// https://mavlink.io/en/messages/common.html#MAV_CMD_DO_SET_MODE,
+	// https://mavlink.io/en/messages/common.html#MAV_CMD_COMPONENT_ARM_DISARM
+
+	// FIXME: repeat until an ACK is received
+	if (command == 'run-mission') {
+		// set mission mode
+		sendMsg({
+			msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+			target_system: sysid,
+			target_component: 0,
+			command: MAV_CMD_DO_SET_MODE,
+			confirmation: 0,
+			param1: MAV_MODE_FLAG_AUTO_ENABLED,
+			param2: 0,
+			param3: 0,
+			param4: 0,
+			param5: 0,
+			param6: 0,
+			param7: 0
+		});
+		// arm vehicle
+		sendMsg({
+			msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+			target_system: sysid,
+			target_component: 0,
+			command: MAV_CMD_COMPONENT_ARM_DISARM,
+			confirmation: 0,
+			param1: 1,
+			param2: 0,
+			param3: 0,
+			param4: 0,
+			param5: 0,
+			param6: 0,
+			param7: 0
+		});
+
+	} else if (command == 'land') {
+		// land copter
+		sendMsg({
+			msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+			target_system: sysid,
+			target_component: 0,
+			command: MAV_CMD_DO_SET_MODE,
+			confirmation: 0,
+			param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+			param2: PX4_CUSTOM_MAIN_MODE_AUTO,
+			param3: PX4_CUSTOM_SUB_MODE_AUTO_LAND,
+			param4: 0,
+			param5: 0,
+			param6: 0,
+			param7: 0
+		});
+
+	} else if (command == 'open') {
+		// open charging station
+		sendMsg({
+			msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+			target_system: sysid,
+			target_component: 0,
+			command: MAV_CMD_DO_SET_MODE,
+			confirmation: 0,
+			param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+			param2: 1,
+			param3: 0,
+			param4: 0,
+			param5: 0,
+			param6: 0,
+			param7: 0
+		});
+
+	} else if (command == "close") {
+		// close charging station
+		sendMsg({
+			msgid: MAVLINK_MSG_ID_COMMAND_LONG,
+			target_system: sysid,
+			target_component: 0,
+			command: MAV_CMD_DO_SET_MODE,
+			confirmation: 0,
+			param1: MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+			param2: 3,
+			param3: 0,
+			param4: 0,
+			param5: 0,
+			param6: 0,
+			param7: 0
+		});
+	}
 })
 
 ymaps.ready(function() {
@@ -118,3 +213,18 @@ ymaps.ready(function() {
 		controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
 	});
 });
+
+/*
+// Send HEARTBEATs. Normally it's not needed.
+setInterval(function() {
+	sendMsg({
+		msgid: MAVLINK_MSG_HEARTBEAT,
+		type: MAV_TYPE_GCS,
+		autopilot: 0,
+		base_mode: 0,
+		custom_mode: 0,
+		system_status: 0,
+		mavlink_version: 0
+	})
+}, 1000);
+*/
