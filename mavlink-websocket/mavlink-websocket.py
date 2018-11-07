@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import time
 import math
 import logging
@@ -13,7 +14,9 @@ from pymavlink.mavutil import mavlink
 
 logging.basicConfig(level=logging.INFO)
 clients = []
-mavconn = mavutil.mavlink_connection('udpin:0.0.0.0:14540', source_system=255)
+url = os.environ.get('MAVLINK_ENDPOINT', 'udpin:0.0.0.0:14540')
+logging.info('Opening MAVLink connection to %s', url)
+mavconn = mavutil.mavlink_connection(url, source_system=255)
 
 
 class MAVLinkClient(websocket.WebSocketHandler):
