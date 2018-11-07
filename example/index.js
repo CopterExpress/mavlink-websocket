@@ -1,3 +1,4 @@
+// some definitions from https://mavlink.io/en/messages/common.html
 const MAVLINK_MSG_HEARTBEAT = 0;
 const MAVLINK_MSG_GLOBAL_POSITION_INT = 33;
 const MAVLINK_MSG_ID_COMMAND_LONG = 76;
